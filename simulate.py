@@ -1,3 +1,34 @@
+'''
+Simulate a sound's time delay of arrival 
+to each recorder in a synchronized array
+
+Usage:
+Simulate TDOAs at recorders 1-4 for a 
+sound located at (3, 17):
+
+    [r1, r2, r3, r4] = simulate_dist(
+            coords_list = [(0, 0), 
+                           (0, 30),
+                           (30, 0),
+                           (30, 30)]
+            desired_spot = (3, 17),
+            temp_c = 21.5
+            print_results = False)
+
+
+Simulate TDOAs  at recorders 1-3 for a sound at 
+a randomly chosen location with random seed 222. 
+Print results, including the chosen spot location:
+
+    [r1, r2, r3] = simulate_dist(
+            coords_list = [(0, 0), (0, 30), (30, 0)],
+            rand_seed = 222, 
+            temp_c = 10.0
+            print_results = True):
+
+    
+'''
+
 import numpy as np
 import random
 import pandas as pd
