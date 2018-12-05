@@ -47,7 +47,7 @@ The above will give a plot of the recorders and sounds as output.
 The original [Sound Finder](https://doi.org/10.1080/09524622.2013.827588) described by Wilson et al. (2014) is an implementation of the mathematically equivalent GPS position/time estimation method of Bancroft et al. (1985), more readably described by Halverson (2010).
 
 This reimplementation is modeled after the R version of Sound Finder, but it differs in several ways. 
-* The R implementation uses the [`qr` function](https://stat.ethz.ch/R-manual/R-devel/library/base/html/qr.html) to return the **compact form** of the QR decomposition of matrix `B`. No equivalent Python function is Python is apparent, so instead the equations are solved directly through matrix inversion. 
+* The R implementation uses the [`qr` function](https://stat.ethz.ch/R-manual/R-devel/library/base/html/qr.html) to return the **compact form** of the QR decomposition of matrix `B`. No equivalent Python function is apparent, so instead the equations are solved directly through matrix inversion. 
 * Because a quadratic equation is solved, two potential solutions are generated. Unlike the original Sound Finder, the returned location is the solution with the lower error value, instead of the lower sum of squares discrepancy; tests found that the error value reliably returned the correct solution in both cases. 
 * PySF does not center the TDOA inputs around their mean (yet). 
 * The usage and file format of inputs are different (see above).
