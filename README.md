@@ -60,5 +60,5 @@ Halverson, T. “Global Positioning Systems,” October 2002. http://web.archive
 
 Wilson, David R., Matthew Battiston, John Brzustowski, and Daniel J. Mennill. “Sound Finder: A New Software Approach for Localizing Animals Recorded with a Microphone Array.” *Bioacoustics* 23, no. 2 (May 4, 2014): 99–112. https://doi.org/10.1080/09524622.2013.827588.
 
-CornelBioacoustics Research Program. *Raven Pro: Interactive Sound Analysis Software* (version 1.5). Ithaca, NY: The Cornell Lab of Ornithology, 2014. http://www.birds.cornell.edu/raven.
+Cornell Bioacoustics Research Program. *Raven Pro: Interactive Sound Analysis Software* (version 1.5). Ithaca, NY: The Cornell Lab of Ornithology, 2014. http://www.birds.cornell.edu/raven.
 
