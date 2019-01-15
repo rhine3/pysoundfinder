@@ -87,11 +87,7 @@ def test_localize_3d(simulated_times_df):
 
     est_position = [x[0], y[0], z[0]]
     
-    # TODO: fix this
     npt.assert_almost_equal(est_position, true_position, decimal=6)
-    
-
-    
     
 
 def test_localize_2d_grid(simulated_times_df):
@@ -198,12 +194,117 @@ def test_localize_3d_grid(simulated_times_df):
     print("Number failed: {}".format(len(failed_list)))
     assert(len(failed_list) == 0)
 
+
+ 
+def test_localizing_grid_with_6_recorders(simulated_times_df):
+    '''
+    Ensure that pysf can localize a grid of points
+    using 6 delays. Asserts accuracy to 6 decimals in each coordinate.
+    '''
+
+    recorder_list = [(0, 0), (0, 30), (30, 0), (30, 30), (40, 40), (-10, 5)]
+    temp_c = 18
+    grid_points = [(x, y) for x in range(-10, 40, 2)
+                          for y in range(-10, 40, 2)]
+    
+    failed_list = []
+
+    # Simulate localization of each point in the grid
+    for true_position in grid_points:
+
+        print(true_position)
+
+        positions, times, temps = simulated_times_df(
+            sound = true_position,
+            recorders = recorder_list,
+            temp = temp_c)
+
+        [x, y, s] = pysf.localize_sound(
+            positions,
+            times,
+            temps.temp)
+
+        est_position = [x[0], y[0]]
         
+        try:
+            npt.assert_almost_equal(est_position, true_position, decimal=6)
+        except AssertionError:
+            failed_list.append((true_position, est_position))
+    
+    # Print information about the failures if the failed_list contains anything
+    for i, failure in enumerate(failed_list):
+        print("Failure {}:".format(i+1))
+        print("  True position: {} ".format(failure[0]))
+        print("  Estimated position: {} ".format(failure[1]))
+        
+    assert(len(failed_list) == 0)
+
+
+def test_localization_when_one_recorder_has_no_delay(tmpdir):
+    '''
+    Test that, when given a .csv in which recorders have
+    no delays for certain sounds (i.e., the recorder didn't hear 
+    that sound), PySF can correctly find the location 
+
+    Asserts accuracy to 6 decimals in each coordinate.
+    '''
+    
+    posi_csv_path = tmpdir.join('positions.csv')
+    time_csv_path = tmpdir.join('times.csv')
+    
+    positions_txt = [
+        ['recorder','x','y'],
+        ['r1','0','0'],
+        ['r2','0','30'],
+        ['r3','30','0'],
+        ['r4','30','30']]
+   
+    true_position = (9, 13)
+    true_positions = [true_position for _ in range(4)]
+    
+    # Create text for a .csv file. Delays in .csv will be coordinates for the
+    # same sound origin point, but for each sound, a different recorder is missing data.
+    
+    # Simulate delays for the point
+    delays = simu.simulate_dist(
+            coords_list = [(0, 0), (0, 30), (30, 0), (30, 30)], 
+            desired_spot = true_position,
+            print_results = False)    
+    
+    # Create a list of lists, the .csv contents
+    str_delays = [str(delay) for delay in delays]
+    idx_many_delays = [[str(idx)] + str_delays for idx in range(4)]
+    top_row = ['idx','r1','r2','r3','r4','temp'] # .csv header
+    times_txt = [top_row] + idx_many_delays
+
+    # Remove the data
+    times_txt[1][3] = '' # r3 missing data for sound 1
+    times_txt[3][4] = '' # r4 missing data for sound 3
+    times_txt[4][1] = '' # r1 missing data for sound 4
+    
+    # Create temporary csvs for position and time
+    with open(posi_csv_path, 'w+') as csvfile:
+        writer = csv.writer(csvfile)
+        for row in positions_txt:
+            writer.writerow(row)
+            
+    with open(time_csv_path, 'w+') as csvfile:
+        writer = csv.writer(csvfile)
+        for row in times_txt:
+            writer.writerow(row)
+
+    # Use pysf to estimate positions
+    est_positions = pysf.all_sounds(posi_csv_path, time_csv_path)
+    
+    try:
+        npt.assert_array_almost_equal(est_positions, true_positions, decimal=6)
+    except AssertionError:
+        print(est_positions, true_positions)
+
+       
 #####################################################
 ###### Test input/output functionality of pysf ######
 #####################################################
-
-
 
 def test_df_creation_from_files(positions_df, times_df, temps_df, tmpdir):
     '''
@@ -255,6 +356,59 @@ def test_df_creation_from_files(positions_df, times_df, temps_df, tmpdir):
     pdt.assert_frame_equal(pysf_times, test_times)
 
 
+def test_df_creation_when_recorder_has_no_delays(positions_df, times_df, temps_df, tmpdir):
+    '''
+    Make sure PySF correctly creates dataframes for files
+    where some recorders have no delays 
+    (i.e. not all recorders "heard" the sound)
+    '''
+
+    posi_csv_path = tmpdir.join('positions.csv')
+    time_csv_path = tmpdir.join('times.csv')
+    
+    positions_txt = [
+        ['recorder','x','y'],
+        ['r1','0','0'],
+        ['r2','0','30'],
+        ['r3','30','0'],
+        ['r4','30','30']]
+    
+    # r3 does not have a delay associated with it
+    times_txt = [
+        ['idx','r1','r2','r3','r4','temp'],
+        ['0','0.0','0.08740886319329808','','0.12361479979957658','20.0']]
+    
+    # Create temporary csvs for position and time
+    with open(posi_csv_path, 'w+') as csvfile:
+        writer = csv.writer(csvfile)
+        for row in positions_txt:
+            writer.writerow(row)
+            
+    with open(time_csv_path, 'w+') as csvfile:
+        writer = csv.writer(csvfile)
+        for row in times_txt:
+            writer.writerow(row)
+
+    pysf_positions, pysf_times, pysf_temps = pysf.dfs_from_files(posi_csv_path, time_csv_path)
+    
+    test_positions = positions_df(
+        [(0, 0),
+        (0, 30),
+        (30, 0),
+        (30, 30)])
+    
+    test_times = times_df([0.0,0.08740886319329808,None,0.12361479979957658])
+    
+    test_temps = temps_df(20)
+ 
+    print(pysf_positions, test_positions)
+    
+    pdt.assert_frame_equal(pysf_temps, test_temps)
+    pdt.assert_frame_equal(pysf_positions, test_positions)#, check_names=False)
+    pdt.assert_frame_equal(pysf_times, test_times)
+
+
+
 
 ######################################################
 ###### Fixtures for creating dataframes for     ######
@@ -285,8 +439,6 @@ def simulated_times_df(positions_df, times_df, temps_df):
         
         
     '''
-    
-    # TODO: convert simu.simulate_dist, positions_df, etc. to lists of coords
     
     def _get_args(sound, recorders, temp):
         
@@ -325,28 +477,22 @@ def positions_df():
             (30, 30)])
     '''
     
-    #TODO: ADD SUPPORT FOR > 4 RECORDERS
-    
     def _get_recorders(recorder_list):
-        
-        # Assert we were given 3 or 4 tuples of coordinates
-        assert(len(recorder_list) in [3, 4]) 
+       
+        # Assert we were given at least 3 tuples of coordinates
+        assert(len(recorder_list) >= 3) 
 
         # Create a dictionary associating recorder names
         # with coordinates given from arguments
-        r1 = recorder_list[0]
-        r2 = recorder_list[1]
-        r3 = recorder_list[2]
-        try:
-            r4 = recorder_list[3]
-            pos_dict = {'r1':r1, 'r2':r2, 'r3':r3, 'r4':r4}
-        except:
-            pos_dict = {'r1':r1, 'r2':r2, 'r3':r3}
-
+        pos_dict = {}
+        for rec_idx in range(len(recorder_list)):
+            rec = recorder_list[rec_idx]
+            rec_name = 'r'+str(rec_idx + 1)
+            pos_dict[rec_name] = rec
 
         # Assert we were given 2D or 3D recorder coordinates;
         # all coordinate tuples must be same length
-        dimensions = len(r1)
+        dimensions = len(recorder_list[0])
         assert(dimensions in [2, 3])
         for key in pos_dict:
             assert len(pos_dict[key]) == dimensions
@@ -393,25 +539,20 @@ def times_df():
     
     def _get_times(*args):
 
-
         # Assert our input looks good
         assert len(args) == 1, 'Must pass only one argument, a list of delays'
         num_recorders = len(args[0])
-        assert (num_recorders in [3, 4]), 'Must pass a list of delays for 3 or 4 recorders'
+        assert (num_recorders >= 3), 'Must pass a list of delays for 3 or more recorders'
 
         # See if we were given a single set of delays, or multiple sets for multiple sounds
         if type(args[0][0]) == list: num_sounds = len(args[0][0])
         else: num_sounds = 1
 
         # Make the initial dict of at least 3 delays
-        delay_dict = {
-            'r1':args[0][0],
-            'r2':args[0][1],
-            'r3':args[0][2]}
-
-        # Try to add args[0][3] to the dict,though it may not exist
-        try: delay_dict['r4'] = args[0][3]
-        except: pass
+        delay_dict = {}
+        for idx, rec in enumerate(args[0], 1):
+            rec_name = 'r' + str(idx)
+            delay_dict[rec_name] = rec
 
         times_df = pd.DataFrame(
             delay_dict, 
