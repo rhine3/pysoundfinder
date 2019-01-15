@@ -208,6 +208,8 @@ def dfs_from_files(position_filename, time_filename):
         and temperatures, is titled 'temp'
       - `positions` has exactly the same index, in exactly the same order, 
         as the rows of `times`, except for 'temp', the final column of times.
+    
+    Returns dataframes for positions, times, and temps
     '''
     
     # Create a dataframe for positions
@@ -216,7 +218,7 @@ def dfs_from_files(position_filename, time_filename):
     # Create a matrix for times
     times = pd.read_csv(time_filename).astype('float64')
     #times.index = pd.Int64Index(range(times.shape[0]), dtype='int64')
-    
+   
     assert list(times)[-1:] == ['temp'],\
         "the final column of the TDOA .csv must be 'temp'"
     assert list(positions.index.values) == list(times)[1:-1],\
@@ -245,22 +247,36 @@ def dfs_from_files(position_filename, time_filename):
 
     times = times_full.drop(labels = 'temp', axis=1)
     temps = times_full[['temp']]
-    
+   
     return positions, times, temps
     
     
-def all_sounds(position_filename, time_filename):  
-    
+def all_sounds(position_filename, time_filename, plot=False):  
+
     # Validate .csvs and return proper dataframes
     positions, times, temps = dfs_from_files(position_filename, time_filename)
     
     sound_locs = []
     
+    # Localize all sounds
     for sound_id in list(times.index.values):
+        # Get only one row of TDOAs to localize
         one_times_row = times.loc[[sound_id]]
         one_temp = temps.loc[[sound_id]].temp
-        solution = localize_sound(positions, one_times_row, one_temp)
+
+        # Find recorders where time is null, i.e. sound did not arrive at recorder
+        no_times = one_times_row.columns[one_times_row.isnull().any(0).nonzero()[0]]
+
+        # Drop recorder columns for those recorders
+        one_times_row.drop(no_times, axis='columns', inplace=True)
+        heard_positions = positions.drop(no_times, axis='index')
+
+        # Localize the sound
+        solution = localize_sound(heard_positions, one_times_row, one_temp)
         sound_locs.append(solution)
-        plot_solution(positions, solution)
+
+        # Plot the solution 
+        if plot: plot_solution(positions, solution)
     
     print(sound_locs)
+    return(sound_locs)

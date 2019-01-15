@@ -128,14 +128,25 @@ def simulate_dist(
     Sound can either be given, or generated randomly.
     
     Inputs:
-        coords1, coords2, coords3, coords4:
-            (x, y) or (x, y, z) coordinates of recorders.
-            All coordinates must have the same dimension.
+        coords_list: a list of (x, y) or (x, y, z) 
+            coordinates of recorders. All coordinates must 
+            have the same dimension.
             
         desired_spot: coordinates of the spot from which the
             simulated sound should emulate. If not provided,
             a random spot is created with the same
             dimensions as the provided recorder coordinates
+
+        rand_seed: random seed for creating the desired spot
+
+        temp_c: temperature in celsius
+
+        print_results: Boolean, whether or not to print results
+            (results are printed by default)
+
+    Returns:
+        a list of time delays for each recorder in the order
+        that their coordinates were given
     '''
     
     coords, s_pos = check_inputs(coords_list, desired_spot, rand_seed)
@@ -144,17 +155,6 @@ def simulate_dist(
     toa_list = []
     for coord in coords:
         toa_list.append(compute_toa(sound_pos = s_pos, rec_pos = coord, sos = calc_sos(temp_celsius = temp_c)))
-    
-    # TODO: implement uppertriangular matrix?
-    '''
-    # Create tdoa dataframe
-    recorders = ['r1', 'r2']
-    minus_r2_tdoa = [toa_1 - toa_2, np.nan, np.nan]
-    minus_r3_tdoa = [toa_1 - toa_3, toa_2 - toa_3, np.nan]
-    minus_r4_tdoa = [toa_1 - toa_4, toa_2 - toa_4, toa_3 - toa_4]
-    df = pd.DataFrame({'-r2': minus_r2_tdoa, '-r3': minus_r3_tdoa}, index=recorders)
-    '''
-    
     
     quiet_print("Recorder positions are:", print_results)
     for i, coord in enumerate(coords):
