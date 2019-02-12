@@ -111,6 +111,11 @@ def localize_sound(positions, times, temp):
     # Calculate speed of sound
     speeds = 331.3 * np.sqrt(1 + temp / 273.15)
     
+    # Center recorders
+    min_x = min(positions['x'], key=abs)
+    min_y = min(positions['y'], key=abs)
+    positions['x'] = positions['x'] - min_x
+    positions['y'] = positions['y'] - min_y
     
     
     ##### Compute B, a, and e #####
@@ -194,8 +199,14 @@ def localize_sound(positions, times, temp):
     
     # Return the solution with the lower error in pseudorange 
     # (Error in pseudorange is the final value of the position/solution vector)
-    if abs(u0[-1]) <= abs(u1[-1]): return u0
-    else: return u1
+    if abs(u0[-1]) <= abs(u1[-1]): sln = u0
+    else: sln = u1
+    
+    # Re-center solution
+    sln[0] += min_x
+    sln[1] += min_y
+    
+    return sln
     
 
 
