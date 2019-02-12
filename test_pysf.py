@@ -14,6 +14,30 @@ import simulate as simu
 ############################################################
 
 
+def test_recenter(simulated_times_df):
+    '''
+    Test pysf.localize_sound() for large recorder coordinates.
+    Asserts accuracy to 6 decimals in each coordinate.
+    '''
+    
+    recorder_list = [(10000, 10000), (10000, 10030), (10030, 10000), (10030, 10030)]
+    true_position = (10007, 10019)
+    temp_c = 20.0
+    
+    positions, times, temps = simulated_times_df(
+        sound = true_position,
+        recorders = recorder_list,
+        temp = temp_c)
+    
+    [x, y, s] = pysf.localize_sound(
+        positions,
+        times,
+        temps.temp)
+
+    est_position = [x[0], y[0]]
+    
+    npt.assert_almost_equal(est_position, true_position, decimal=6)
+
 def test_localize_on_top_of_recorder(simulated_times_df):
     '''
     Test pysf.localize_sound() for sound at (0, 0).
