@@ -100,8 +100,8 @@ def test_localize_2d_grid(simulated_times_df):
     
     recorder_list = [(0, 0), (0, 30), (30, 0), (30, 30)]
     temp_c = 20.0
-    grid_points = [(x, y) for x in range(-10, 40, 2)
-                          for y in range(-10, 40, 2)]
+    grid_points = [(x, y) for x in range(-10, 41, 5)
+                          for y in range(-10, 41, 5)]
     
     failed_list = []
     
@@ -157,9 +157,9 @@ def test_localize_3d_grid(simulated_times_df):
     
     recorder_list = [(0, 0, 3), (0, 30, 3.2), (30, 0, 3.3), (30, 30, 3.4)]
     temp_c = 20.0
-    grid_points = [(x, y, z) for x in np.arange(0.01, 30, 2)
-                             for y in np.arange(0.01, 30, 2)
-                             for z in np.arange(0.01, 15, 2)]
+    grid_points = [(x, y, z) for x in np.arange(0.01, 31, 5)
+                             for y in np.arange(0.01, 31, 5)
+                             for z in np.arange(0.01, 16, 5)]
     
     failed_list = []
     
@@ -204,8 +204,8 @@ def test_localizing_grid_with_6_recorders(simulated_times_df):
 
     recorder_list = [(0, 0), (0, 30), (30, 0), (30, 30), (40, 40), (-10, 5)]
     temp_c = 18
-    grid_points = [(x, y) for x in range(-10, 40, 2)
-                          for y in range(-10, 40, 2)]
+    grid_points = [(x, y) for x in range(-10, 41, 5)
+                          for y in range(-10, 41, 5)]
     
     failed_list = []
 
