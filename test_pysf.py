@@ -37,7 +37,7 @@ def test_recenter(simulated_times_df):
     est_position = [x[0], y[0]]
     
     npt.assert_almost_equal(est_position, true_position, decimal=6)
-
+    
 def test_localize_on_top_of_recorder(simulated_times_df):
     '''
     Test pysf.localize_sound() for sound at (0, 0).
@@ -103,7 +103,7 @@ def test_localize_3d(simulated_times_df):
         recorders = recorder_list,
         temp = temp_c)
 
-    
+
     [x, y, z, s] = pysf.localize_sound(
         positions,
         times,
@@ -158,7 +158,73 @@ def test_localize_2d_grid(simulated_times_df):
     assert(len(failed_list) == 0)
 
 
+    
+def grid_first_delay_is_0(positions_df, times_df, temps_df):
+    '''
+    Test pysf.localize_sound() for arrays of delays 
+    where the earliest delay is 0. 
+    
+    All other delays produced by the fixture simulated_times_df() 
+    are given as the absolute time between the sound being made and 
+    arriving at the recorder. In real applications, the 
+    absolute time is not known, only the relative difference in time
+    from the sound's arrival to the first recorder at which it arrived.
+    '''
+    
+    
+    recorder_list = [(0, 0), (0, 30), (30, 0), (30, 30)]
+    temp_c = 20.0
+    grid_points = [(x, y) for x in np.arange(-10, 41, 5)
+                          for y in np.arange(-10, 41, 5)]
+    
+    adder = 0
+    failed_list = []
+    
+    for point in grid_points:
+        true_position = point
+
+        # The below code is similar to simulated_times_df, but with
+        # one additional step--changing the list of delays so that
+        # the lowest delay starts at 0
+
+        positions = positions_df(recorder_list)
+
+        delays = simu.simulate_dist(
+            coords_list = recorder_list,
+            desired_spot = true_position,
+            temp_c = temp_c,
+            print_results = False)
+
+        # The important change--the earliest delay is 0
+        delays = np.subtract(delays, min(delays))
+
+        times = times_df(delays)
+
+        temps = temps_df(temp_c)
         
+        [x, y, other_position] = pysf.localize_sound(
+            positions,
+            times,
+            temps.temp)
+
+        est_position = [x[0], y[0]]
+        
+        try:
+            npt.assert_almost_equal(est_position, true_position, decimal=6)
+        except AssertionError:
+            failed_list.append((true_position, est_position, other_position, delays))
+    
+    # Print information about the failures if the failed_list contains anything
+    for i, failure in enumerate(failed_list):
+        print("Failure {}:".format(i+1))
+        print("  True position: {} ".format(failure[0]))
+        print("  Estimated position: {} ".format(failure[1]))
+        print("  Other position: {} ".format(failure[2]))
+        print("  Delays: {}".format(failure[3]))
+        print("  Recorders: {}".format(recorder_list))
+        
+    assert(len(failed_list) == 0)
+    
 
 def test_localize_3d_grid(simulated_times_df):
     '''
@@ -235,8 +301,6 @@ def test_localizing_grid_with_6_recorders(simulated_times_df):
 
     # Simulate localization of each point in the grid
     for true_position in grid_points:
-
-        print(true_position)
 
         positions, times, temps = simulated_times_df(
             sound = true_position,
@@ -468,11 +532,17 @@ def simulated_times_df(positions_df, times_df, temps_df):
         
         positions = positions_df(recorders)
         
+        # Get a list of delays
         delays = simu.simulate_dist(
             coords_list = recorders,
             desired_spot = sound,
             temp_c = temp,
             print_results = False)
+        
+        # Change delays so that the earliest
+        # arrival time is 0, as would be the
+        # case in real uses of PySF
+        delays -= min(delays)
         
         times = times_df(delays)
         
@@ -632,7 +702,7 @@ def test_simulated_times_df(simulated_times_df, positions_df, times_df, temps_df
     )
     
     desired_time = times_df(
-        [0.01456814386554968, 0.07625696263183752, 0.07952658868254762])
+        [0., 0.06168882, 0.06495844])
     
     desired_temp = temps_df(20.0)
 
