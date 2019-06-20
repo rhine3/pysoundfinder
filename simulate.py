@@ -7,11 +7,11 @@ Simulate TDOAs at recorders 1-4 for a
 sound located at (3, 17):
 
     [r1, r2, r3, r4] = simulate_dist(
-            coords_list = [(0, 0), 
+            recorder_coords = [(0, 0), 
                            (0, 30),
                            (30, 0),
                            (30, 30)]
-            desired_spot = (3, 17),
+            source_coords = (3, 17),
             temp_c = 21.5
             print_results = False)
 
@@ -21,7 +21,7 @@ a randomly chosen location with random seed 222.
 Print results, including the chosen spot location:
 
     [r1, r2, r3] = simulate_dist(
-            coords_list = [(0, 0), (0, 30), (30, 0)],
+            recorder_coords = [(0, 0), (0, 30), (30, 0)],
             rand_seed = 222, 
             temp_c = 10.0
             print_results = True):
@@ -80,19 +80,19 @@ def quiet_print(desired_text, should_print):
     else:
         return
 
-def check_inputs(coords_list, desired_spot, rand_seed):
+def check_inputs(recorders, desired_spot, rand_seed):
              
     # Create np.array list of recorders
-    coords_list
-    for i, coord in enumerate(coords_list):
-        coords_list[i] = np.array(coord)
-    assert len(coords_list) >= 3
+    recorders
+    for i, coord in enumerate(recorders):
+        recorders[i] = np.array(coord)
+    assert len(recorders) >= 3
     
     # Ensure one of the coordinates is either 2 or 3 dimensions,
     # and all of the other coordinates have the same dimensions
-    dimension = len(coords_list[0])
+    dimension = len(recorders[0])
     assert ((dimension == 2) or (dimension == 3))
-    for coord in coords_list:
+    for coord in recorders:
         assert len(coord) == dimension
     
     if desired_spot:
@@ -111,12 +111,12 @@ def check_inputs(coords_list, desired_spot, rand_seed):
             desired_spot = [sound_x, sound_y]
     s_pos = np.array(desired_spot)
 
-    return coords_list, s_pos
+    return recorders, s_pos
     
 
 def simulate_dist(
-        coords_list,
-        desired_spot = None, 
+        recorder_coords,
+        source_coords = None, 
         rand_seed = 1, 
         temp_c = 20.0,
         print_results = True):
@@ -128,11 +128,11 @@ def simulate_dist(
     Sound can either be given, or generated randomly.
     
     Inputs:
-        coords_list: a list of (x, y) or (x, y, z) 
+        recorder_coords: a list or tuple of (x, y) or (x, y, z) 
             coordinates of recorders. All coordinates must 
             have the same dimension.
             
-        desired_spot: coordinates of the spot from which the
+        source_coords: coordinates of the spot from which the
             simulated sound should emulate. If not provided,
             a random spot is created with the same
             dimensions as the provided recorder coordinates
@@ -149,7 +149,7 @@ def simulate_dist(
         that their coordinates were given
     '''
     
-    coords, s_pos = check_inputs(coords_list, desired_spot, rand_seed)
+    coords, s_pos = check_inputs(recorder_coords, source_coords, rand_seed)
    
     # Compute time of arrivals:
     toa_list = []

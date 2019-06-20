@@ -267,8 +267,8 @@ def test_localization_when_one_recorder_has_no_delay(tmpdir):
     
     # Simulate delays for the point
     delays = simu.simulate_dist(
-            coords_list = [(0, 0), (0, 30), (30, 0), (30, 30)], 
-            desired_spot = true_position,
+            recorder_coords = [(0, 0), (0, 30), (30, 0), (30, 30)], 
+            source_coords = true_position,
             print_results = False)    
     
     # Create a list of lists, the .csv contents
@@ -445,8 +445,8 @@ def simulated_times_df(positions_df, times_df, temps_df):
         positions = positions_df(recorders)
         
         delays = simu.simulate_dist(
-            coords_list = recorders,
-            desired_spot = sound,
+            recorder_coords = recorders,
+            source_coords = sound,
             temp_c = temp,
             print_results = False)
         
