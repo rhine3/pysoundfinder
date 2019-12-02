@@ -72,7 +72,16 @@ def lorentz_ip(x1, x2 = 'none', dim=None):
     # Compute the inner product with a three-vector "dot-product"
     return sum(a*b*c for a, b, c in zip(x1, x2, lorentz_coeffs))
 
-def localize_sound(positions, times, temp):
+
+
+def localize_sound(
+    positions,
+    times,
+    temp,
+    invert_alg = 'gps', #options: 'lstsq', 'gps'
+    center = True, #True = original Sound Finder behavior
+    pseudo = True #False = original Sound Finder
+):
     
     '''
     Perform TDOA localization on a sound
@@ -98,6 +107,18 @@ def localize_sound(positions, times, temp):
         temp: a single-row pandas series containing the float value
           of the temperature in Celsius at which the time was created.
           
+        invert_alg: what inversion algorithm to use
+        
+        center: whether to center recorders before computing localization
+          result. Computes localization relative to centered plot, then
+          translates solution back to original recorder locations. 
+          (For behavior of original Sound Finder, use True)
+        
+        pseudo: whether to use the pseudorange error (True) or 
+          sum of squares discrepancy (False) to pick the solution to return
+          (For behavior of original Sound Finder, use False. However, 
+          in initial tests, pseudorange error appears to perform better.)
+          
     Returns:
         The solution with the lower sum of squares discrepancy
     '''
@@ -111,7 +132,22 @@ def localize_sound(positions, times, temp):
     # Calculate speed of sound
     speeds = 331.3 * np.sqrt(1 + temp / 273.15)
     
-    
+    ##### Center recorders #####
+    if center:
+        warnings.warn("centering")
+        x_center = positions['x'].mean()
+        y_center = positions['y'].mean()
+        positions_centered = positions.copy()
+        positions_centered['x'] = positions_centered['x'] - x_center
+        positions_centered['y'] = positions_centered['y'] - y_center
+        if dim == 3:
+            z_center = positions['z'].mean()
+            positions_centered['z'] = positions_centered['z'] - z_center
+        #print('positions_centered',positions_centered)
+        positions = positions_centered
+    else:
+        warnings.warn("not centering")
+
     
     ##### Compute B, a, and e #####
     # Find the pseudorange, rho, for each recorder
@@ -128,28 +164,55 @@ def localize_sound(positions, times, temp):
     # The vector of squared Lorentz norms
     a = pd.DataFrame(0.5 * B.apply(lorentz_ip, axis=1))
     
-    ## Compute B+ = (B^T \* B)^(-1) \* B^T
-    # B^T * B
-    to_invert = np.matmul(B.T, B)
-    try:
-        inverted = np.linalg.inv(to_invert)
-    except np.linalg.LinAlgError as err:
-        if 'Singular matrix' in str(err):
-            warnings.warn("Singular matrix. Were recorders linear or on same plane? Exiting with NaN outputs", UserWarning)
-            return [[np.nan]]*(dim+1)
-        else:
-            raise
+
+    #print('invert_alg', invert_alg)
+        
+    if invert_alg == 'lstsq':
+        # Closest equivalent to R's solve(qr(B), e)
+        Bplus_e = np.linalg.lstsq(B, e, rcond=None)[0]
+        Bplus_a = np.linalg.lstsq(B, a, rcond=None)[0]
+
     
+    else: # invert_alg == 'gps' or 'special'
+        ## Compute B+ = (B^T \* B)^(-1) \* B^T
+        # B^T * B
+        
+        to_invert = np.matmul(B.T, B)
+        try:
+            inverted = np.linalg.inv(to_invert)
+            
+        except np.linalg.LinAlgError as err: 
+            # Simply fail
+            if invert_alg == 'gps':
+                warnings.warn('4')
+                if 'Singular matrix' in str(err):
+                    warnings.warn('5')
+                    warnings.warn("Singular matrix. Were recorders linear or on same plane? Exiting with NaN outputs", UserWarning)
+                    return [[np.nan]]*(dim+1)
+                else:
+                    warnings.warn('6')
+                    raise
+                     
+            
+            # Fall back to lstsq algorithm
+            else: # invert_alg == 'special'
+                warnings.warn('7')
+                
+                Bplus_e = np.linalg.lstsq(B, e, rcond=None)[0]
+                Bplus_a = np.linalg.lstsq(B, a, rcond=None)[0]
+
     # The whole thing
     Bplus = np.matmul(inverted, B.T)
-    
-    
-    
-    ###### Solve quadratic equation for lambda #####
-    # First compute B+ * a and B+ * e
+
+    # Compute B+ * a and B+ * e
     Bplus_a = np.matmul(Bplus, a)
-    Bplus_e = np.matmul(Bplus, e)
+    Bplus_e = np.matmul(Bplus, e)   
+
+
+
+    ###### Solve quadratic equation for lambda #####
     
+  
     # Compute coefficients
     cA = lorentz_ip(Bplus_e)
     cB = 2*(lorentz_ip(Bplus_e, Bplus_a) -1)
@@ -178,24 +241,38 @@ def localize_sound(positions, times, temp):
     
     ##### Return the better solution #####
      
+    # Re-translate points
+    if center:
+            u0[0] += x_center
+            u0[1] += y_center
+            if dim == 3:
+                u0[2] += z_center 
+                    
+            u1[0] += x_center
+            u1[1] += y_center
+            if dim == 3:
+                u1[2] += z_center
+
+    # Select and return quadratic solution
+    if pseudo:
+        # Return the solution with the lower error in pseudorange 
+        # (Error in pseudorange is the final value of the position/solution vector)
+        if abs(u0[-1]) <= abs(u1[-1]): return u0
+        else: return u1
+        
+    else:    
+        # This was the return method used in the original Sound Finder,
+        # but it gives worse performance
+        
+        # Compute sum of squares discrepancies for each solution
+        s0 = float(np.sum((np.matmul(B, u0) - np.add(a, lamb[0] * e))**2))
+        s1 = float(np.sum((np.matmul(B, u1) - np.add(a, lamb[1] * e))**2)) 
+
+        # Return the solution with lower sum of squares discrepancy
+        if s0 < s1: return u0 
+        else: return u1
     
-    # This was the return method used in the original Sound Finder,
-    # but it gave the wrong solution for localizations of sounds
-    # on the center axes of a simulated symmetrical square recorder setup
-    '''
-    # Compute sum of squares discrepancies for each solution
-    s0 = float(np.sum((np.matmul(B, u0) - np.add(a, lamb[0] * e))**2))
-    s1 = float(np.sum((np.matmul(B, u1) - np.add(a, lamb[1] * e))**2)) 
     
-    # Return the solution with lower sum of squares discrepancy
-    if s0 < s1: return u0 
-    else: return u1
-    '''
-    
-    # Return the solution with the lower error in pseudorange 
-    # (Error in pseudorange is the final value of the position/solution vector)
-    if abs(u0[-1]) <= abs(u1[-1]): return u0
-    else: return u1
     
 
 
