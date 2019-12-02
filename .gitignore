@@ -2,3 +2,5 @@
 .ipynb_checkpoints/
 .pytest_cache/
 __pycache__/
+original_Sound-Finder/
+tests-and-figures/
