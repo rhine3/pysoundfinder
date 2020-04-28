@@ -203,7 +203,7 @@ def localize_sound(
     Bplus = np.matmul(inverted, B.T)
     
     # Compute B+ * a and B+ * e
-    # Note: .values required for some reason--due to mixing of pd & np?
+    # TODO: .values required for some reason--due to mixing of pd & np?
     Bplus_a = np.matmul(Bplus.values, a.values)
     Bplus_e = np.matmul(Bplus.values, e.values)   
 
