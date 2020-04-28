@@ -123,11 +123,12 @@ def localize_sound(
         The solution with the lower sum of squares discrepancy
     '''
     
-    
     # The number of dimensions in which to perform localization
     # 1 is subtracted to avoid counting the index_col (recorder number)
     # as a dimension
     dim = positions.shape[1]
+    if dim == 2:
+        positions['z'] = positions.shape[0]*[0]
 
     # Calculate speed of sound
     speeds = 331.3 * np.sqrt(1 + temp / 273.15)
@@ -137,12 +138,12 @@ def localize_sound(
         warnings.warn("centering")
         x_center = positions['x'].mean()
         y_center = positions['y'].mean()
+        z_center = positions['z'].mean()
+        
         positions_centered = positions.copy()
         positions_centered['x'] = positions_centered['x'] - x_center
         positions_centered['y'] = positions_centered['y'] - y_center
-        if dim == 3:
-            z_center = positions['z'].mean()
-            positions_centered['z'] = positions_centered['z'] - z_center
+        positions_centered['z'] = positions_centered['z'] - z_center
         #print('positions_centered',positions_centered)
         positions = positions_centered
     else:
@@ -163,9 +164,6 @@ def localize_sound(
     
     # The vector of squared Lorentz norms
     a = pd.DataFrame(0.5 * B.apply(lorentz_ip, axis=1))
-    
-
-    #print('invert_alg', invert_alg)
         
     if invert_alg == 'lstsq':
         # Closest equivalent to R's solve(qr(B), e)
@@ -203,10 +201,11 @@ def localize_sound(
 
     # The whole thing
     Bplus = np.matmul(inverted, B.T)
-
+    
     # Compute B+ * a and B+ * e
-    Bplus_a = np.matmul(Bplus, a)
-    Bplus_e = np.matmul(Bplus, e)   
+    # Note: .values required for some reason--due to mixing of pd & np?
+    Bplus_a = np.matmul(Bplus.values, a.values)
+    Bplus_e = np.matmul(Bplus.values, e.values)   
 
 
 
@@ -231,9 +230,9 @@ def localize_sound(
     
     # Find solution 0 and solution 1
     ale0 = np.add(a, lamb[0] * e)
-    u0 = np.matmul(Bplus, ale0)
+    u0 = np.matmul(Bplus.values, ale0.values)
     ale1 =  np.add(a, lamb[1] * e)
-    u1 = np.matmul(Bplus, ale1)
+    u1 = np.matmul(Bplus.values, ale1.values)
     
     #print('Solution 1: {}'.format(u0))
     #print('Solution 2: {}'.format(u1))
