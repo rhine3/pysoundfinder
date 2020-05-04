@@ -178,7 +178,7 @@ def localize_sound(
         to_invert = np.matmul(B.T, B)
         try:
             inverted = np.linalg.inv(to_invert)
-            
+
         except np.linalg.LinAlgError as err: 
             # Simply fail
             if invert_alg == 'gps':
@@ -190,25 +190,22 @@ def localize_sound(
                 else:
                     warnings.warn('6')
                     raise
-                     
             
             # Fall back to lstsq algorithm
             else: # invert_alg == 'special'
                 warnings.warn('7')
-                
                 Bplus_e = np.linalg.lstsq(B, e, rcond=None)[0]
                 Bplus_a = np.linalg.lstsq(B, a, rcond=None)[0]
 
-    # The whole thing
-    Bplus = np.matmul(inverted, B.T)
-    
-    # Compute B+ * a and B+ * e
-    # TODO: .values required for some reason--due to mixing of pd & np?
-    Bplus_a = np.matmul(Bplus.values, a.values)
-    Bplus_e = np.matmul(Bplus.values, e.values)   
+        else:
+            # The whole thing
+            Bplus = np.matmul(inverted, B.T)
 
-
-
+            # Compute B+ * a and B+ * e
+            # TODO: .values required for some reason--due to mixing of pd & np?
+            Bplus_a = np.matmul(Bplus.values, a.values)
+            Bplus_e = np.matmul(Bplus.values, e.values)   
+            
     ###### Solve quadratic equation for lambda #####
     
   
