@@ -1,6 +1,8 @@
 # pysoundfinder
-
 Sound localization software for Python
+
+# Important note: This repository is deprecated
+# Please use the localization functionality in [OpenSoundscape](https://opensoundscape.org) instead!
 
 ## About
 
